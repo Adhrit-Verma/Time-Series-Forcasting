@@ -2,10 +2,6 @@ import pandas as pd
 import numpy as np
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.arima.model import ARIMA
-from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.models import Sequential # type: ignore
-from tensorflow.keras.layers import Dense, LSTM # type: ignore
-from tensorflow.keras.callbacks import EarlyStopping # type: ignore
 import itertools
 
 def eda():
@@ -27,8 +23,6 @@ def eda():
     # Call ARIMA function for model fitting
     arima_model(df)
 
-    # Call LSTM function for model fitting
-    lstm_model(df)
 
 def arima_model(df):
     # Check for stationarity using ADF Test
@@ -84,73 +78,6 @@ def forecast_arima(df):
     print("\n--- ARIMA Forecast for Next 12 Months ---")
     for i, value in enumerate(forecast, 1):
         print(f"Month {i}: {value:.2f} passengers")
-
-def lstm_model(df):
-    # Prepare data for LSTM model
-    df_scaled, scaler = scale_data(df)
-    X_train, y_train = prepare_lstm_data(df_scaled)
-
-    # LSTM Model with two layers and dropout for regularization
-    model = Sequential([
-        LSTM(100, return_sequences=True, input_shape=(X_train.shape[1], 1)),
-        LSTM(50),  # Adding a second LSTM layer
-        Dense(1)
-    ])
-    
-    model.compile(optimizer='adam', loss='mse')
-
-    # Early stopping to avoid overfitting
-    early_stop = EarlyStopping(monitor='loss', patience=5)
-
-    # Fit LSTM model
-    print("Training LSTM model...")
-    history = model.fit(X_train, y_train, epochs=50, batch_size=32, verbose=1, callbacks=[early_stop])
-
-    # Forecasting with LSTM
-    forecast_lstm(df, model, scaler)
-
-def forecast_lstm(df, model, scaler):
-    # Last 12 months as input
-    last_values = df['Passengers'].values[-12:].reshape(1, 12, 1)
-
-    forecast = []
-
-    print("\n--- LSTM Forecast for Next 12 Months ---")
-    for i in range(12):
-        # Predict next value
-        pred = model.predict(last_values)
-
-        # Clip predictions to avoid extreme values
-        pred = np.clip(pred, 0, 1)  # Keep predictions within 0-1 range
-
-        # Inverse scale the prediction back to original scale
-        pred_rescaled = scaler.inverse_transform(pred)
-
-        # Append the forecasted value
-        forecast.append(pred_rescaled[0, 0])
-
-        # Prepare for the next iteration
-        pred_reshaped = pred.reshape(1, 1, 1)
-        last_values = np.append(last_values[:, 1:, :], pred_reshaped, axis=1)  # Shift and append new prediction
-
-        print(f"Month {i+1}: {pred_rescaled[0, 0]:.2f} passengers")
-
-
-def scale_data(df):
-    # Scaling the data for LSTM (values between 0 and 1)
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    df_scaled = scaler.fit_transform(df[['Passengers']])
-    return df_scaled, scaler
-
-def prepare_lstm_data(df_scaled, time_step=12):
-    X, y = [], []
-    for i in range(time_step, len(df_scaled)):
-        X.append(df_scaled[i-time_step:i, 0])
-        y.append(df_scaled[i, 0])
-
-    X, y = np.array(X), np.array(y)
-    X = np.reshape(X, (X.shape[0], X.shape[1], 1))
-    return X, y
 
 # Run the EDA and modeling
 eda()
