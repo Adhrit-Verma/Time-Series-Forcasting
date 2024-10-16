@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.arima.model import ARIMA
+from sklearn.metrics import mean_squared_error
 import itertools
 
 def eda():
@@ -78,6 +79,21 @@ def forecast_arima(df):
     print("\n--- ARIMA Forecast for Next 12 Months ---")
     for i, value in enumerate(forecast, 1):
         print(f"Month {i}: {value:.2f} passengers")
+
+    # Calculate RMSE by comparing forecasted and actual data for the last 12 months in the dataset
+    rmse = calculate_rmse(df['Passengers'], model_fit)
+    print(f"\n--- RMSE: {rmse:.4f} ---")
+
+
+def calculate_rmse(actual, model_fit):
+    # Using the last 12 months for comparison
+    n_obs = 12
+    actual_values = actual[-n_obs:]
+    predicted_values = model_fit.predict(start=len(actual)-n_obs, end=len(actual)-1)
+
+    # Calculate RMSE
+    rmse = np.sqrt(mean_squared_error(actual_values, predicted_values))
+    return rmse
 
 # Run the EDA and modeling
 eda()
