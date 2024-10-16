@@ -1,8 +1,11 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.arima.model import ARIMA
+
+import itertools
 
 def eda():    
     # Load dataset
@@ -63,6 +66,36 @@ def arima_model(df):
     # Summary of the model
     print(model_fit.summary())
 
+    tune_arima_model(df)
 
-# Run the analysis
+def tune_arima_model(df):
+    p = range(0, 4)  # Try AR terms from 0 to 3
+    d = [1]          # Differencing is fixed at 1
+    q = range(0, 4)  # Try MA terms from 0 to 3
+
+    # Create all combinations of p, d, and q
+    pdq = list(itertools.product(p, d, q))
+
+    best_aic = float('inf')  # Initialize with a large number
+    best_pdq = None
+    best_model = None
+
+    # Try different combinations and fit the model
+    for param in pdq:
+        try:
+            model = ARIMA(df['Passengers'], order=param)
+            model_fit = model.fit()
+            print(f'Tried ARIMA{param} - AIC:{model_fit.aic}')
+            if model_fit.aic < best_aic:
+                best_aic = model_fit.aic
+                best_pdq = param
+                best_model = model_fit
+        except:
+            continue
+
+    # Print the best model
+    print(f'Best ARIMA{best_pdq} - AIC:{best_aic}')
+    print(best_model.summary())
+
+
 eda()
