@@ -53,12 +53,16 @@ def arima_model(df):
         print("Data is stationary, no differencing needed.")
         df_diff = df['Passengers']
 
+    # Add progress print statement
+    print("Starting ARIMA model fitting...")
+
     # Fitting ARIMA model (p,d,q) - You can tune these parameters
     model = ARIMA(df_diff, order=(5, 1, 0))
     model_fit = model.fit()
 
     # Summary of the model
     print(model_fit.summary())
+
 
 # Run the analysis
 eda()
