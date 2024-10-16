@@ -90,17 +90,19 @@ def lstm_model(df):
     df_scaled, scaler = scale_data(df)
     X_train, y_train = prepare_lstm_data(df_scaled)
 
-    # LSTM Model
+    # LSTM Model with two layers and dropout for regularization
     model = Sequential([
-        LSTM(50, activation='relu', input_shape=(X_train.shape[1], 1)),
+        LSTM(100, return_sequences=True, input_shape=(X_train.shape[1], 1)),
+        LSTM(50),  # Adding a second LSTM layer
         Dense(1)
     ])
+    
     model.compile(optimizer='adam', loss='mse')
 
     # Early stopping to avoid overfitting
     early_stop = EarlyStopping(monitor='loss', patience=5)
 
-    # Train the model
+    # Fit LSTM model
     print("Training LSTM model...")
     history = model.fit(X_train, y_train, epochs=50, batch_size=32, verbose=1, callbacks=[early_stop])
 
@@ -118,10 +120,10 @@ def forecast_lstm(df, model, scaler):
         # Predict next value
         pred = model.predict(last_values)
 
-        # Check if prediction is too far out of expected range
-        pred = np.clip(pred, 0, 1)  # Ensure prediction is within scaled bounds
+        # Clip predictions to avoid extreme values
+        pred = np.clip(pred, 0, 1)  # Keep predictions within 0-1 range
 
-        # Inverse scale the prediction back to the original scale
+        # Inverse scale the prediction back to original scale
         pred_rescaled = scaler.inverse_transform(pred)
 
         # Append the forecasted value
@@ -132,6 +134,7 @@ def forecast_lstm(df, model, scaler):
         last_values = np.append(last_values[:, 1:, :], pred_reshaped, axis=1)  # Shift and append new prediction
 
         print(f"Month {i+1}: {pred_rescaled[0, 0]:.2f} passengers")
+
 
 def scale_data(df):
     # Scaling the data for LSTM (values between 0 and 1)
